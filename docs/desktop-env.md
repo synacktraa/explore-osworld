@@ -59,7 +59,7 @@ RUN test -f /System.qcow2 && \
 
 ```python
 self.container = self.client.containers.run(
-    self.image,  # Use pre-built image instead of happysixd/osworld-docker
+    "synacktra/osworld-ubuntu:latest",
     environment=self.environment,
     cap_add=["NET_ADMIN"],
     devices=devices,
