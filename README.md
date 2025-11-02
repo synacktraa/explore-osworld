@@ -32,20 +32,26 @@ The initial focus has been on solving desktop environment provisioning challenge
 
 ```
 explore-osworld/
-├── docs/                          # Research documentation
-│   └── desktop-env.md            # Detailed research notes and findings
-├── template/                      # Modified OSWorld Docker image
-│   ├── Dockerfile                # Patches happysixd/osworld-docker
-│   ├── override-install.sh       # Modified script to support /vm path
-│   └── verify-and-entry.sh       # Conditional entrypoint for snapshots
+├── docs/                                 # Research documentation
+│   ├── desktop-env.md                   # Detailed research notes
+│   └── summary-desktop-env.md           # One-page summary
+├── template/                             # Modified OSWorld Docker images
+│   ├── bundled/                         # VM baked into image
+│   │   └── Dockerfile                   # Multi-stage build (synacktra/osworld-ubuntu)
+│   └── volume-based/                    # VM loaded from volume
+│       ├── Dockerfile                   # Patched image (synacktra/osworld-docker)
+│       ├── override-install.sh          # Modified script for /vm path
+│       └── verify-and-entry.sh          # Conditional entrypoint
 ├── providers/
-│   ├── common.py                 # Shared utilities
-│   ├── docker/                   # Local Docker provider
-│   │   └── run.py               # Run OSWorld with local Docker
-│   └── daytona/                  # Daytona sandbox provider
-│       ├── run.py               # Run OSWorld on Daytona
-│       └── build-volume.md      # Guide for setting up Daytona volumes
-└── pyproject.toml                # Project dependencies
+│   ├── common.py                        # Shared utilities
+│   ├── docker/                          # Local Docker provider
+│   │   ├── run_bundled.py              # Run with bundled VM
+│   │   └── run_volume_based.py         # Run with volume mount
+│   └── daytona/                         # Daytona sandbox provider
+│       ├── run_bundled.py              # Run with bundled VM
+│       ├── run_volume_based.py         # Run with volume mount
+│       └── build-volume.md             # Volume setup guide
+└── pyproject.toml                       # Project dependencies
 ```
 
 ### Quick Start
@@ -56,30 +62,46 @@ explore-osworld/
 - Docker (for local testing)
 - Daytona account and CLI (for cloud deployment)
 
-#### Modified Docker Image
+#### Modified Docker Images
 
-The `template/` directory contains a modified version of `happysixd/osworld-docker` (published as `synacktra/osworld-docker`) that is used by both local Docker and Daytona providers. It patches the original image to:
+The `template/` directory contains two approaches:
 
-- Support flexible VM paths (`/vm/System.qcow2` instead of `/System.qcow2`)
-- Add a conditional entrypoint for Daytona snapshot validation
-- Maintain compatibility with the original OSWorld controller contract
+**Bundled** (`template/bundled/`):
+- Multi-stage Dockerfile that bakes the 22.7 GB VM directly into the image
+- Published as `synacktra/osworld-ubuntu`
+- Works locally but fails on e2b due to layer size limits
+
+**Volume-based** (`template/volume-based/`):
+- Patches `happysixd/osworld-docker` to support flexible VM paths (`/vm/System.qcow2`)
+- Published as `synacktra/osworld-docker`
+- Includes conditional entrypoint for Daytona snapshot validation
+- Works with both local Docker and Daytona volume mounts
 
 #### Docker Testing
 
+**Volume-based** (recommended):
 ```bash
-uv run python -m providers.docker.run
+uv run python -m providers.docker.run_volume_based
 ```
 
-This mounts the VM file from your local filesystem at `/vm/System.qcow2` in the container.
+**Bundled**:
+```bash
+uv run python -m providers.docker.run_bundled
+```
 
 #### Daytona Testing
 
+**Volume-based** (recommended):
 ```bash
 export DAYTONA_API_KEY=dtn_xxxxxx
-uv run python -m providers.daytona.run
+uv run python -m providers.daytona.run_volume_based
 ```
 
-This uses a Daytona volume with the VM file and a snapshot built from `synacktra/osworld-docker`.
+**Bundled**:
+```bash
+export DAYTONA_API_KEY=dtn_xxxxxx
+uv run python -m providers.daytona.run_bundled
+```
 
 ## Key Findings
 
