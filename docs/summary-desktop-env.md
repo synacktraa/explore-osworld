@@ -13,6 +13,8 @@ Enable OSWorld's desktop environment to run on modern sandbox providers (Daytona
 ### 1. Bake VM into Image (synacktra/osworld-ubuntu)
 - Built a multi-stage Dockerfile that bundles the QCOW2 inside the image.
 - Local Docker run succeeded; E2B template build failed because the image produces ~12 GB uncompressed layers, exceeding the per-layer cap.
+- **Code**: [`template/bundled/Dockerfile`](../template/bundled/Dockerfile)
+- **Implementation**: [`providers/docker/run_bundled.py`](../providers/docker/run_bundled.py), [`providers/daytona/run_bundled.py`](../providers/daytona/run_bundled.py)
 
 > See [Multi-Stage Image Experiment](desktop-env.md#multi-stage-image-experiment) for more details
 
@@ -25,8 +27,8 @@ Enable OSWorld's desktop environment to run on modern sandbox providers (Daytona
 ### 3. Patch Base Image for `/vm/System.qcow2`
 - Reverse engineered the closed-source image to replace `/run/install.sh`, redirecting VM lookups from `/System.qcow2` to `/vm/System.qcow2`.
 - New image (`synacktra/osworld-docker`) runs perfectly with a volume mounted at `/vm`, restoring controller functionality in local Docker.
-- **Code**: [`template/Dockerfile`](../template/Dockerfile), [`template/override-install.sh`](../template/override-install.sh)
-- **Implementation**: [`providers/docker/run.py`](../providers/docker/run.py)
+- **Code**: [`template/volume-based/Dockerfile`](../template/volume-based/Dockerfile), [`template/volume-based/override-install.sh`](../template/volume-based/override-install.sh)
+- **Implementation**: [`providers/docker/run_volume_based.py`](../providers/docker/run_volume_based.py)
 
 > See [Reverse Engineering the Docker Image](desktop-env.md#reverse-engineering-the-docker-image) for more details
 
@@ -34,8 +36,8 @@ Enable OSWorld's desktop environment to run on modern sandbox providers (Daytona
 - Daytona snapshot validation launches the container without volumes, so the original entrypoint crashed.
 - Added `verify-and-entry.sh` wrapper: if `/vm/System.qcow2` exists run the original entrypoint; otherwise sleep to satisfy validation.
 - Snapshot build/validate now passes, but runtime sandboxes fail to obtain an IP (APIs never come up) despite the same image working when run directly via Docker. Root cause still under investigation.
-- **Code**: [`template/verify-and-entry.sh`](../template/verify-and-entry.sh)
-- **Implementation**: [`providers/daytona/run.py`](../providers/daytona/run.py)
+- **Code**: [`template/volume-based/verify-and-entry.sh`](../template/volume-based/verify-and-entry.sh)
+- **Implementation**: [`providers/daytona/run_volume_based.py`](../providers/daytona/run_volume_based.py)
 
 > See [Snapshot Build Process](desktop-env.md#snapshot-build-process) for more details
 
