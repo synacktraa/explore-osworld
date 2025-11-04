@@ -16,46 +16,32 @@
 
 - Providers such as e2b and Daytona let us snapshot Docker images into templates but do not support attaching large external volumes. The existing Docker provider relies on the `happysixd/osworld-docker` base image (see [desktop_env/providers/docker/provider.py#L110](https://github.com/xlang-ai/OSWorld/blob/main/desktop_env/providers/docker/provider.py#L110)) and expects a 22.7 GB `System.qcow2` disk to be mounted, so it cannot run on these services as-is.
 
-## Multi-Stage Image Experiment
+## Bundled Image Approach
 
 - Strategy: Bake the VM disk directly into the container image so no runtime volume is needed.
-- `Dockerfile` used:
+- The Dockerfile downloads and extracts the VM on-the-fly during the build process, avoiding temporary storage overhead:
 
 ```docker
-# This builds osworld-docker with Ubuntu VM pre-installed
-
-# Stage 1: Download and extract Ubuntu VM
-FROM ubuntu:22.04 AS vm-builder
-
-RUN apt-get update && \
-    apt-get install -y wget unzip ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-WORKDIR /tmp
-
-# Download Ubuntu VM
-RUN wget --progress=dot:giga \
-    https://huggingface.co/datasets/xlangai/ubuntu_osworld/resolve/main/Ubuntu.qcow2.zip && \
-    unzip Ubuntu.qcow2.zip && \
-    rm Ubuntu.qcow2.zip
-
-# Verify the VM file exists and is readable
-RUN test -f /tmp/Ubuntu.qcow2 && \
-    echo "VM file size: $(du -h /tmp/Ubuntu.qcow2)"
-
-# Stage 2: Layer VM on top of osworld-docker
 FROM happysixd/osworld-docker
 
-# Copy VM from builder stage to the expected location
-COPY --from=vm-builder --chmod=644 /tmp/Ubuntu.qcow2 /System.qcow2
+# Install wget and bsdtar for on-the-fly extraction
+RUN apt-get update && \
+    apt-get install -y wget libarchive-tools ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Verify the VM was copied successfully
+# Download and extract on the fly - zip file never stored on disk
+RUN wget --progress=dot:giga -O - \
+    https://huggingface.co/datasets/xlangai/ubuntu_osworld/resolve/main/Ubuntu.qcow2.zip \
+    | bsdtar -xOf - > /System.qcow2 && \
+    chmod 644 /System.qcow2
+
+# Verify the VM was installed successfully
 RUN test -f /System.qcow2 && \
     echo "VM installed at /System.qcow2" && \
     ls -lh /System.qcow2
 ```
 
-- Built image: `synacktra/osworld-ubuntu:latest`. This image was tested by modifying the Docker provider’s `start_emulator` method locally to remove the volume mount requirement:
+- Built image: `synacktra/osworld-ubuntu:latest`. This image was tested by modifying the Docker provider's `start_emulator` method locally to remove the volume mount requirement:
 
 ```python
 self.container = self.client.containers.run(

@@ -11,12 +11,12 @@ Enable OSWorld's desktop environment to run on modern sandbox providers (Daytona
 ## Experiments Completed
 
 ### 1. Bake VM into Image (synacktra/osworld-ubuntu)
-- Built a multi-stage Dockerfile that bundles the QCOW2 inside the image.
+- Built a bundled image that downloads and extracts the QCOW2 on-the-fly during build, avoiding temporary storage overhead.
 - Local Docker run succeeded; E2B template build failed because the image produces ~12 GB uncompressed layers, exceeding the per-layer cap.
 - **Code**: [`template/bundled/Dockerfile`](../template/bundled/Dockerfile)
 - **Implementation**: [`providers/docker/run_bundled.py`](../providers/docker/run_bundled.py), [`providers/daytona/run_bundled.py`](../providers/daytona/run_bundled.py)
 
-> See [Multi-Stage Image Experiment](desktop-env.md#multi-stage-image-experiment) for more details
+> See [Bundled Image Approach](desktop-env.md#bundled-image-experiment) for more details
 
 ### 2. Daytona Volume at Root
 - Attempted to mount Daytona's managed volume at `/System.qcow2`.

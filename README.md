@@ -37,7 +37,7 @@ explore-osworld/
 │   └── summary-desktop-env.md           # One-page summary
 ├── template/                             # Modified OSWorld Docker images
 │   ├── bundled/                         # VM baked into image
-│   │   └── Dockerfile                   # Multi-stage build (synacktra/osworld-ubuntu)
+│   │   └── Dockerfile                   # Bundled build (synacktra/osworld-ubuntu)
 │   └── volume-based/                    # VM loaded from volume
 │       ├── Dockerfile                   # Patched image (synacktra/osworld-docker)
 │       ├── override-install.sh          # Modified script for /vm path
@@ -67,7 +67,7 @@ explore-osworld/
 The `template/` directory contains two approaches:
 
 **Bundled** (`template/bundled/`):
-- Multi-stage Dockerfile that bakes the 22.7 GB VM directly into the image
+- Dockerfile that downloads and extracts the 22.7 GB VM on-the-fly during build
 - Published as `synacktra/osworld-ubuntu`
 - Works locally but fails on e2b due to layer size limits
 
@@ -105,8 +105,8 @@ uv run python -m providers.daytona.run_bundled
 
 ## Key Findings
 
-### Multi-Stage Image Approach (Attempted)
-Initially attempted to bake the VM directly into the Docker image using multi-stage builds. This worked locally but failed on e2b & daytona due to their 10 GiB layer size limit.
+### Bundled Image Approach (Attempted)
+Initially attempted to bake the VM directly into the Docker image with on-the-fly extraction during build. This worked locally but failed on e2b due to their 10 GiB per-layer size limit.
 
 ### Volume Mount Solution (Successful)
 Discovered that Daytona supports volume mounting through S3FS and gfuse. By reverse-engineering the `happysixd/osworld-docker` image and patching the `/run/install.sh` script, successfully moved the VM file from `/System.qcow2` to `/vm/System.qcow2`, enabling volume-based deployment.
